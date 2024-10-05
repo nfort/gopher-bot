@@ -1,0 +1,21 @@
+volumes:
+  gitea:
+    driver: local
+  gitea-config:
+    driver: local
+
+services:
+  server:
+    image: gitea/gitea:latest-rootless
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    userns_mode: keep-id:uid=1000,gid=1000
+    restart: always
+    volumes:
+      - gitea:/var/lib/gitea
+      - gitea-config:/etc/gitea
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:2222"
