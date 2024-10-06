@@ -1,8 +1,8 @@
-Добавить для Gitea виртуальную сеть.
+# gopher-bot
 
-![image](https://user-images.githubusercontent.com/1002000/114235710-0f9c9b80-7e0a-11eb-9c6c-6f9a6b8c9e0b.png)
+![alt text](https://github.com/nfort/gopher-bot/blob/main/screenshot.png?raw=true)
 
-## Конфигурация
+## Разработка
 
 Для доступа к хуку нужно добавить
 
