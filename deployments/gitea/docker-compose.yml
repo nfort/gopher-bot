@@ -3,12 +3,19 @@ volumes:
     driver: local
   gitea-config:
     driver: local
+  gopher-bot_config:
+    external: true
+    name: gopher-bot_config
+  gopher-bot_ssh:
+    external: true
+    name: gopher-bot_ssh
+
+networks:
+  gitea-network: {}
 
 services:
-  server:
+  gitea:
     image: gitea/gitea:latest-rootless
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     userns_mode: keep-id:uid=1000,gid=1000
     restart: always
     volumes:
@@ -19,3 +26,15 @@ services:
     ports:
       - "3000:3000"
       - "2222:2222"
+    networks:
+      - gitea-network
+
+  gopher-bot:
+    image: nfort/gopher-bot:1.0.0
+    restart: always
+    volumes:
+      - gopher-bot_config:/etc/gopher-bot
+    ports:
+      - "8080:8080"
+    networks:
+      - gitea-network

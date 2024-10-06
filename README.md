@@ -12,3 +12,4 @@ docker run -it --rm -v gitea_gitea-config:/etc/gitea busybox sh -c 'cat << EOF >
 ALLOWED_HOST_LIST = *
 EOF'
 ```
+
