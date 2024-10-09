@@ -157,6 +157,7 @@ func runCheckPR(hook *models.PRHook) {
 	_, err = git.PlainClone(dataDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
 		URL:               hook.Repository.CloneURL,
+		Tags:              git.AllTags,
 		Depth:             1,
 		ReferenceName:     plumbing.NewBranchReferenceName(hook.PullRequest.Head.Ref),
 		RecurseSubmodules: git.NoRecurseSubmodules,
