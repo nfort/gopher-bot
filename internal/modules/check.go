@@ -157,7 +157,6 @@ func runCheckPR(hook *models.PRHook) {
 	_, err = git.PlainClone(dataDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
 		URL:               hook.Repository.CloneURL,
-		Tags:              git.AllTags,
 		Depth:             1,
 		ReferenceName:     plumbing.NewBranchReferenceName(hook.PullRequest.Head.Ref),
 		RecurseSubmodules: git.NoRecurseSubmodules,
@@ -247,10 +246,13 @@ func (c *Cmd) Run(name string, arg ...string) error {
 
 	if err = cmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
+			if exiterr.ExitCode() == 0 {
+				return nil
+			}
+			log.Printf("exit status %d", exiterr.ExitCode())
 			if len(stderr) == 0 {
 				return err
 			}
-			log.Printf("exit status %d", exiterr.ExitCode())
 		} else {
 			log.Printf("cmd.Wait: %v", err)
 		}
