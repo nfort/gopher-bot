@@ -17,6 +17,7 @@ EOF'
 
 
 ```bash
+docker volume create gopher-bot_config
 docker run -it --rm -v gopher-bot_config:/etc/gopher-bot busybox sh -c 'cat << EOF >> /etc/gopher-bot/config.ini
 [tokens]
 "http://gitea:3000"=gopher-bot:[token]
@@ -24,6 +25,7 @@ docker run -it --rm -v gopher-bot_config:/etc/gopher-bot busybox sh -c 'cat << E
 [server]
 DEBUG_MODE=true
 SECRET=iNeydroTioUC'
+docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot --name gopher-bot nfort/gopher-bot:1.0.0
 ```
 
 3. Добавить webhook для репозитория

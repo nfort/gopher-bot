@@ -122,7 +122,7 @@ func startCheckPR(hook *models.PRHook) {
 
 func runCheckPR(hook *models.PRHook) {
 	instance := models.RepositoryInstance(hook.Repository)
-	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token))
+	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token), gitea.SetDebugMode())
 	if err != nil {
 		log.Printf("NewClient: %s", err)
 		finishPr("NewClient", err, hook, "")
@@ -194,7 +194,8 @@ func runCheckPR(hook *models.PRHook) {
 		cmderr = cmd.Run("make", "build")
 	}
 
-	c.SetSudo("gopher-bot")
+	// Почему то с этим не работает..., если пользак gopher-bot
+	// c.SetSudo("gopher-bot")
 	if cmderr != nil {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{
 			State: gitea.ReviewStateRequestChanges,

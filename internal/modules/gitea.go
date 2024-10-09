@@ -8,7 +8,7 @@ import (
 
 func SetStatus(repo *gitea.Repository, commit string, status gitea.StatusState, desc string, isPR bool) {
 	instance := models.RepositoryInstance(repo)
-	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token))
+	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token), gitea.SetDebugMode())
 	if err != nil {
 		return
 	}
