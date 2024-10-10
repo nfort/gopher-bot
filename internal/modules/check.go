@@ -246,9 +246,6 @@ func (c *Cmd) Run(name string, arg ...string) error {
 
 	if err = cmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
-			if exiterr.ExitCode() == 0 {
-				return nil
-			}
 			log.Printf("exit status %d", exiterr.ExitCode())
 			if len(stderr) == 0 {
 				return err
@@ -256,6 +253,10 @@ func (c *Cmd) Run(name string, arg ...string) error {
 		} else {
 			log.Printf("cmd.Wait: %v", err)
 		}
+	}
+
+	if err == nil {
+		return nil
 	}
 
 	if len(stderr) > 0 {
