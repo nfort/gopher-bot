@@ -125,7 +125,7 @@ func runCheckPR(hook *models.PRHook) {
 	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token), gitea.SetDebugMode())
 	if err != nil {
 		log.Printf("NewClient: %s", err)
-		finishPr("NewClient", err, hook, "")
+		finishPr("NewClient", err, hook)
 		return
 	}
 
@@ -136,7 +136,8 @@ func runCheckPR(hook *models.PRHook) {
 		commit, _, err = c.GetSingleCommit(hook.Repository.Owner.UserName, hook.Repository.Name, hook.PullRequest.Head.SHA)
 		if err != nil {
 			log.Printf("GetSingleCommit: %s", err)
-			finishPr("GetSingleCommit", err, hook, "")
+			finishPr("GetSingleCommit", err, hook)
+			return
 		}
 		if strings.Contains(commit.RepoCommit.Message, config.Config.Server.Skip) {
 			return
@@ -146,9 +147,10 @@ func runCheckPR(hook *models.PRHook) {
 	workingDir, err := os.MkdirTemp("", "gopher-bot-*")
 	if err != nil {
 		log.Printf("TempDir: %s", err)
-		finishPr("TempDir", err, hook, "")
+		finishPr("TempDir", err, hook)
 		return
 	}
+	defer os.RemoveAll(workingDir)
 
 	_, err = git.PlainClone(workingDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
@@ -159,7 +161,7 @@ func runCheckPR(hook *models.PRHook) {
 	})
 	if err != nil {
 		log.Printf("PlainClone: %s", err)
-		finishPr("PlainClone", err, hook, workingDir)
+		finishPr("PlainClone", err, hook)
 		return
 	}
 
@@ -175,7 +177,7 @@ func runCheckPR(hook *models.PRHook) {
 	})
 	if err != nil {
 		log.Printf("CreateReviewRequests: %v", err)
-		finishPr("CreateReviewRequests", err, hook, "")
+		finishPr("CreateReviewRequests", err, hook)
 	}
 
 	var cmderr error
@@ -198,26 +200,22 @@ func runCheckPR(hook *models.PRHook) {
 		if err != nil {
 			log.Printf("CreatePullReview: %v", err)
 		}
-		finishPr("run go build", errors.New("build error"), hook, "")
+		finishPr("run go build", errors.New("build error"), hook)
 		return
 	} else {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{
 			State: gitea.ReviewStateApproved,
 		})
 		if err != nil {
-			finishPr("CreatePullReview", err, hook, "")
+			finishPr("CreatePullReview", err, hook)
 			return
 		}
 	}
 
-	finishPr("", nil, hook, "")
+	finishPr("", nil, hook)
 }
 
-func finishPr(tag string, err error, hook *models.PRHook, dataDir string) {
-	errRm := os.RemoveAll(dataDir)
-	if err != nil {
-		err = errRm
-	}
+func finishPr(tag string, err error, hook *models.PRHook) {
 	if err != nil {
 		SetStatus(hook.Repository, hook.PullRequest.Head.SHA, gitea.StatusError, fmt.Sprintf("%s: %v\n", tag, err), true)
 	} else {
