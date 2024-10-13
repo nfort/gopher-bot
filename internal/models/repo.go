@@ -26,10 +26,6 @@ func RepositoryInstance(r *gitea.Repository) string {
 	return strings.Join(url, "/")
 }
 
-func RepositoryDataDir(r *gitea.Repository, base string) string {
-	return base + r.Name
-}
-
 type User struct {
 	Login string `json:"login"`
 }
