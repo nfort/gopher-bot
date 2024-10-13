@@ -152,7 +152,7 @@ func runCheckPR(hook *models.PRHook) {
 	}
 	defer os.RemoveAll(workingDir)
 
-	_, err = git.PlainClone(workingDir, false, &git.CloneOptions{
+	r, err := git.PlainClone(workingDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
 		URL:               hook.Repository.CloneURL,
 		Depth:             1,
@@ -162,6 +162,30 @@ func runCheckPR(hook *models.PRHook) {
 	if err != nil {
 		log.Printf("PlainClone: %s", err)
 		finishPr("PlainClone", err, hook)
+		return
+	}
+
+	w, err := r.Worktree()
+	if err != nil {
+		log.Printf("Worktree: %s", err)
+		finishPr("Worktree", err, hook)
+		return
+	}
+
+	ref, err := r.Head()
+	if err != nil {
+		log.Printf("Head: %s", err)
+		finishPr("Head", err, hook)
+		return
+	}
+
+	err = w.Reset(&git.ResetOptions{
+		Commit: ref.Hash(),
+		Mode:   git.HardReset,
+	})
+	if err != nil {
+		log.Printf("Reset: %s", err)
+		finishPr("Reset", err, hook)
 		return
 	}
 

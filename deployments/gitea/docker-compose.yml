@@ -30,7 +30,9 @@ services:
       - gitea-network
 
   gopher-bot:
-    image: nfort/gopher-bot:1.0.0
+    build:
+      context: ../..
+      dockerfile: ./deployments/gopher-bot/Dockerfile
     restart: always
     volumes:
       - gopher-bot_config:/etc/gopher-bot
