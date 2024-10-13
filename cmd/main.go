@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const VERSION = "v1.0.5"
+const VERSION = "v1.0.6"
 
 func main() {
 	if err := config.InitConfig(); err != nil {
@@ -35,15 +35,15 @@ func main() {
 	}
 	r := gin.Default()
 	r.POST("/hook", func(c *gin.Context) {
-		modules.StartCheck(c)
+		modules.HandlerWebHook(c)
 	})
 
-	if err := r.Run(getConnStr()); err != nil {
+	if err := r.Run(getAddrStr()); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func getConnStr() string {
+func getAddrStr() string {
 	host := config.Config.Server.Domain
 	port := config.Config.Server.Port
 	return fmt.Sprintf("%s:%d", host, port)

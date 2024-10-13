@@ -10,13 +10,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/nfort/gopher-bot/internal/models"
 	"github.com/nfort/gopher-bot/internal/modules/config"
+	"github.com/nfort/gopher-bot/pkg/cmd"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -29,7 +29,7 @@ type responseMsg struct {
 	Msg string `json:"message"`
 }
 
-func StartCheck(c *gin.Context) {
+func HandlerWebHook(c *gin.Context) {
 	if c.Request.Header["X-Gitea-Event"] == nil || len(c.Request.Header["X-Gitea-Event"]) != 1 {
 		log.Println("missing header")
 		c.JSON(http.StatusNotFound, responseMsg{"missing header"})
@@ -125,36 +125,34 @@ func runCheckPR(hook *models.PRHook) {
 	c, err := gitea.NewClient(instance, gitea.SetToken(config.Config.Token(instance).Token), gitea.SetDebugMode())
 	if err != nil {
 		log.Printf("NewClient: %s", err)
-		finishPr("NewClient", err, hook, "")
+		finishPr("NewClient", err, hook)
 		return
 	}
 
 	if strings.Contains(hook.PullRequest.Title, config.Config.Server.Skip) {
 		return
 	} else {
-		commit, _, err := c.GetSingleCommit(hook.Repository.Owner.UserName, hook.Repository.Name, hook.PullRequest.Head.SHA)
+		var commit *gitea.Commit
+		commit, _, err = c.GetSingleCommit(hook.Repository.Owner.UserName, hook.Repository.Name, hook.PullRequest.Head.SHA)
 		if err != nil {
 			log.Printf("GetSingleCommit: %s", err)
-			finishPr("GetSingleCommit", err, hook, "")
+			finishPr("GetSingleCommit", err, hook)
+			return
 		}
 		if strings.Contains(commit.RepoCommit.Message, config.Config.Server.Skip) {
 			return
 		}
 	}
 
-	var dataDir string
-	if config.Config.Data.Tmp {
-		dataDir, err = os.MkdirTemp("", "codeberg.org-qwerty287-tea-cloc-*")
-		if err != nil {
-			log.Printf("TempDir: %s", err)
-			finishPr("TempDir", err, hook, "")
-			return
-		}
-	} else {
-		dataDir = models.RepositoryDataDir(hook.Repository, config.Config.Data.Location)
+	workingDir, err := os.MkdirTemp("", "gopher-bot-*")
+	if err != nil {
+		log.Printf("TempDir: %s", err)
+		finishPr("TempDir", err, hook)
+		return
 	}
+	defer os.RemoveAll(workingDir)
 
-	_, err = git.PlainClone(dataDir, false, &git.CloneOptions{
+	r, err := git.PlainClone(workingDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
 		URL:               hook.Repository.CloneURL,
 		Depth:             1,
@@ -163,7 +161,31 @@ func runCheckPR(hook *models.PRHook) {
 	})
 	if err != nil {
 		log.Printf("PlainClone: %s", err)
-		finishPr("PlainClone", err, hook, dataDir)
+		finishPr("PlainClone", err, hook)
+		return
+	}
+
+	w, err := r.Worktree()
+	if err != nil {
+		log.Printf("Worktree: %s", err)
+		finishPr("Worktree", err, hook)
+		return
+	}
+
+	ref, err := r.Head()
+	if err != nil {
+		log.Printf("Head: %s", err)
+		finishPr("Head", err, hook)
+		return
+	}
+
+	err = w.Reset(&git.ResetOptions{
+		Commit: ref.Hash(),
+		Mode:   git.HardReset,
+	})
+	if err != nil {
+		log.Printf("Reset: %s", err)
+		finishPr("Reset", err, hook)
 		return
 	}
 
@@ -179,19 +201,17 @@ func runCheckPR(hook *models.PRHook) {
 	})
 	if err != nil {
 		log.Printf("CreateReviewRequests: %v", err)
-		finishPr("CreateReviewRequests", err, hook, "")
+		finishPr("CreateReviewRequests", err, hook)
 	}
 
 	var cmderr error
-	cmd := &Cmd{
-		dir: dataDir,
-	}
-	makefile := filepath.Clean(filepath.Join(dataDir, "Makefile"))
+	command := cmd.NewCommand(workingDir)
+	makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
 	if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
 		log.Printf("Makefile not found")
-		cmderr = cmd.Run("go", "build")
+		cmderr = command.Run("go", "build")
 	} else {
-		cmderr = cmd.Run("make", "build")
+		cmderr = command.Run("make", "build")
 	}
 
 	// Почему то с этим не работает..., если пользак gopher-bot
@@ -204,73 +224,22 @@ func runCheckPR(hook *models.PRHook) {
 		if err != nil {
 			log.Printf("CreatePullReview: %v", err)
 		}
-		finishPr("run go build", errors.New("build error"), hook, "")
+		finishPr("run go build", errors.New("build error"), hook)
 		return
 	} else {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{
 			State: gitea.ReviewStateApproved,
 		})
 		if err != nil {
-			finishPr("CreatePullReview", err, hook, "")
+			finishPr("CreatePullReview", err, hook)
 			return
 		}
 	}
 
-	finishPr("", nil, hook, "")
+	finishPr("", nil, hook)
 }
 
-type Cmd struct {
-	dir string
-}
-
-func (c *Cmd) Run(name string, arg ...string) error {
-	cmd := exec.Command(name, arg...)
-	if c.dir != "" {
-		cmd.Dir = c.dir
-	}
-
-	stderrpipe, err := cmd.StderrPipe()
-	if err != nil {
-		log.Printf("cmd.StderrPipe: %v", err)
-	}
-
-	err = cmd.Start()
-	if err != nil {
-		log.Printf("cmd.Start: %v", err)
-	}
-
-	stderr, err := io.ReadAll(stderrpipe)
-	if err != nil {
-		log.Printf("ReadAll: %v", err)
-	}
-
-	if err = cmd.Wait(); err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			log.Printf("exit status %d", exiterr.ExitCode())
-			if len(stderr) == 0 {
-				return err
-			}
-		} else {
-			log.Printf("cmd.Wait: %v", err)
-		}
-	}
-
-	if err == nil {
-		return nil
-	}
-
-	if len(stderr) > 0 {
-		return errors.New(string(stderr))
-	}
-
-	return nil
-}
-
-func finishPr(tag string, err error, hook *models.PRHook, dataDir string) {
-	// errRm := os.RemoveAll(dataDir)
-	// if err != nil {
-	// 	err = errRm
-	// }
+func finishPr(tag string, err error, hook *models.PRHook) {
 	if err != nil {
 		SetStatus(hook.Repository, hook.PullRequest.Head.SHA, gitea.StatusError, fmt.Sprintf("%s: %v\n", tag, err), true)
 	} else {

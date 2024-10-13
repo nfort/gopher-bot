@@ -13,10 +13,8 @@ import (
 var Config *Configuration
 
 type Configuration struct {
-	Tokens   map[string]*Token
-	Database *DatabaseConfig
-	Server   *ServerConfig
-	Data     *DataConfig
+	Tokens map[string]*Token
+	Server *ServerConfig
 }
 
 func (c *Configuration) Token(instance string) *Token {
@@ -45,18 +43,6 @@ func (t *Token) Git() *http.BasicAuth {
 	}
 }
 
-type DatabaseConfig struct {
-	Type     string `ini:"TYPE"`
-	Path     string `ini:"PATH"`
-	Timeout  int    `ini:"TIMEOUT"`
-	Host     string `ini:"HOST"`
-	Name     string `ini:"NAME"`
-	User     string `ini:"USER"`
-	Password string `ini:"PASSWORD"`
-	SSL      string `ini:"SSL"`
-	Charset  string `ini:"CHARSET"`
-}
-
 type ServerConfig struct {
 	Domain          string `ini:"DOMAIN"`
 	Port            int    `ini:"PORT"`
@@ -67,7 +53,6 @@ type ServerConfig struct {
 	TLSMode         string `ini:"TLS_MODE"`
 	TLSCert         string `ini:"TLS_CERT"`
 	TLSPriv         string `ini:"TLS_PRIV"`
-	CommentType     string `ini:"COMMENT_TYPE"`
 	StatusContext   string `ini:"STATUS_CONTEXT"`
 	StatusContextPR string `ini:"STATUS_CONTEXT_PR"`
 	Skip            string `ini:"SKIP"`
@@ -114,7 +99,6 @@ func InitConfig() error {
 		DebugMode:       false,
 		AllowPush:       true,
 		AllowPR:         true,
-		CommentType:     "table",
 		StatusContext:   "gopher-bot",
 		StatusContextPR: "gopher-bot (PR)",
 		Skip:            "[skip gopher-bot]",
@@ -124,20 +108,9 @@ func InitConfig() error {
 		return err
 	}
 
-	data := &DataConfig{
-		Tmp:      true,
-		Location: "data/",
-		Keep:     false,
-	}
-	err = cfg.Section("data").MapTo(data)
-	if err != nil {
-		return err
-	}
-
 	Config = &Configuration{
 		Tokens: t,
 		Server: s,
-		Data:   data,
 	}
 
 	return nil
