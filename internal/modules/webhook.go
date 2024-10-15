@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nfort/gopher-bot/internal/cmd"
 	"github.com/nfort/gopher-bot/internal/models"
 	"github.com/nfort/gopher-bot/internal/modules/config"
-	"github.com/nfort/gopher-bot/pkg/cmd"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
@@ -155,7 +155,6 @@ func runCheckPR(hook *models.PRHook) {
 	r, err := git.PlainClone(workingDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
 		URL:               hook.Repository.CloneURL,
-		Depth:             1,
 		ReferenceName:     plumbing.NewBranchReferenceName(hook.PullRequest.Head.Ref),
 		RecurseSubmodules: git.NoRecurseSubmodules,
 	})
@@ -165,38 +164,9 @@ func runCheckPR(hook *models.PRHook) {
 		return
 	}
 
-	w, err := r.Worktree()
-	if err != nil {
-		log.Printf("Worktree: %s", err)
-		finishPr("Worktree", err, hook)
-		return
-	}
-
-	ref, err := r.Head()
-	if err != nil {
-		log.Printf("Head: %s", err)
-		finishPr("Head", err, hook)
-		return
-	}
-
-	err = w.Reset(&git.ResetOptions{
-		Commit: ref.Hash(),
-		Mode:   git.HardReset,
-	})
-	if err != nil {
-		log.Printf("Reset: %s", err)
-		finishPr("Reset", err, hook)
-		return
-	}
-
-	user, _, err := c.GetUserInfo("gopher-bot")
-	if err != nil {
-		log.Printf("GetUserInfo: %s", err)
-	}
-
 	_, err = c.CreateReviewRequests(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.PullReviewRequestOptions{
 		Reviewers: []string{
-			user.UserName,
+			"gopher-bot",
 		},
 	})
 	if err != nil {
@@ -204,22 +174,46 @@ func runCheckPR(hook *models.PRHook) {
 		finishPr("CreateReviewRequests", err, hook)
 	}
 
-	var cmderr error
-	command := cmd.NewCommand(workingDir)
-	makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
-	if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
-		log.Printf("Makefile not found")
-		cmderr = command.Run("go", "build")
-	} else {
-		cmderr = command.Run("make", "build")
+	runner := NewRunner(workingDir, r, hook,
+		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+			var cmderr error
+
+			command := cmd.NewCommand(workingDir)
+			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
+			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
+				log.Printf("Makefile not found")
+				_, cmderr = command.Run("go", "build")
+			} else {
+				_, cmderr = command.Run("make", "build")
+			}
+
+			if cmderr != nil {
+				return fmt.Errorf("**Build error**\n ```\n%s\n```", cmderr.Error())
+			}
+
+			return nil
+		},
+		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+			command := cmd.NewCommand(workingDir)
+			stdout, cmderr := command.Run("golangci-lint", "run", "-v")
+
+			if cmderr != nil {
+				return fmt.Errorf("**Golangci-lint error**\n ```\n%s\n```", stdout)
+			}
+
+			return nil
+		},
+	)
+
+	err = runner.Run()
+	if err != nil {
+		log.Printf("Runner.Run: %s", err)
 	}
 
-	// Почему то с этим не работает..., если пользак gopher-bot
-	// c.SetSudo("gopher-bot")
-	if cmderr != nil {
+	if err != nil {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{
 			State: gitea.ReviewStateRequestChanges,
-			Body:  "**Build error**\n ```\n" + cmderr.Error() + "\n```",
+			Body:  err.Error(),
 		})
 		if err != nil {
 			log.Printf("CreatePullReview: %v", err)
