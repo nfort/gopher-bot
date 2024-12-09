@@ -3,7 +3,9 @@ package models
 import "code.gitea.io/sdk/gitea"
 
 type PRHook struct {
+	Action      string            `json:"action"`
 	Number      int64             `json:"number"`
+	Title       string            `json:"title"`
 	PullRequest *PullRequest      `json:"pull_request"`
 	Repository  *gitea.Repository `json:"repository"`
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const VERSION = "v1.0.6"
+const VERSION = "v1.1.0"
 
 func main() {
 	if err := config.InitConfig(); err != nil {

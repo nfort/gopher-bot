@@ -6,6 +6,9 @@ volumes:
   gopher-bot_config:
     external: true
     name: gopher-bot_config
+  gopher-bot_var:
+    external: true
+    name: gopher-bot_var
   gopher-bot_ssh:
     external: true
     name: gopher-bot_ssh
@@ -17,6 +20,15 @@ services:
   gitea:
     image: gitea/gitea:latest-rootless
     userns_mode: keep-id:uid=1000,gid=1000
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=mysql
+      - GITEA__database__HOST=db:3306
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
     restart: always
     volumes:
       - gitea:/var/lib/gitea
@@ -28,6 +40,21 @@ services:
       - "2222:2222"
     networks:
       - gitea-network
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=gitea
+      - MYSQL_USER=gitea
+      - MYSQL_PASSWORD=gitea
+      - MYSQL_DATABASE=gitea
+    networks:
+      - gitea-network
+    volumes:
+      - ./mysql:/var/lib/mysql     - gitea-network
 
   gopher-bot:
     build:
@@ -36,6 +63,7 @@ services:
     restart: always
     volumes:
       - gopher-bot_config:/etc/gopher-bot
+      - gopher-bot_var:/var/gopher-bot
     ports:
       - "8080:8080"
     networks:

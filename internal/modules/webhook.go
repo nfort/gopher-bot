@@ -17,12 +17,17 @@ import (
 	"github.com/nfort/gopher-bot/internal/cmd"
 	"github.com/nfort/gopher-bot/internal/models"
 	"github.com/nfort/gopher-bot/internal/modules/config"
+	"github.com/nfort/gopher-bot/internal/modules/testcoverage"
 
 	"code.gitea.io/sdk/gitea"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+)
+
+const (
+	database = "/var/gopher-bot/database/sqlite.db"
 )
 
 type responseMsg struct {
@@ -96,6 +101,16 @@ func HandlerWebHook(c *gin.Context) {
 			return
 		}
 
+		if h.Action != "opened" && h.Action != "synchronized" && h.Action != "reopened" {
+			log.Printf("action not supported: %s", h.Action)
+			c.JSON(403, responseMsg{"action not supported"})
+			return
+		}
+		if strings.HasPrefix(h.Title, "WIP:") {
+			log.Printf("title not allowed: %s", h.Title)
+			c.JSON(403, responseMsg{"title not allowed"})
+			return
+		}
 		if config.Config.Server.Owner != "" && h.Repository.Owner.UserName != config.Config.Server.Owner {
 			log.Printf("owner not allowed: %s", h.Repository.Owner.UserName)
 			c.JSON(403, responseMsg{"owner not allowed"})
@@ -194,11 +209,57 @@ func runCheckPR(hook *models.PRHook) {
 			return nil
 		},
 		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+			var cmdStdout string
+			var cmdErr error
+
 			command := cmd.NewCommand(workingDir)
-			stdout, cmderr := command.Run("golangci-lint", "run", "-v")
+			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
+			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
+				log.Printf("Makefile not found")
+				cmdStdout, cmdErr = command.Run("golangci-lint", "run", "-v")
+			} else {
+				cmdStdout, cmdErr = command.Run("make", "lint")
+			}
+
+			if cmdErr != nil {
+				if len(cmdStdout) == 0 {
+					return fmt.Errorf("**Golangci-lint error**\n ```\n%s\n```", cmdErr.Error())
+				}
+				return fmt.Errorf("**Golangci-lint error**\n ```\n%s\n```", cmdStdout)
+			}
+
+			return nil
+		},
+		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+			var cmderr error
+
+			command := cmd.NewCommand(workingDir)
+			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
+			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
+				log.Printf("Makefile not found")
+				_, cmderr = command.Run("go", "test", "./...")
+			} else {
+				_, cmderr = command.Run("make", "test")
+			}
 
 			if cmderr != nil {
-				return fmt.Errorf("**Golangci-lint error**\n ```\n%s\n```", stdout)
+				return fmt.Errorf("**Test error**\n ```\n%s\n```", cmderr.Error())
+			}
+
+			return nil
+		},
+		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+			repo := testcoverage.NewRepo(database)
+			tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
+			errCover := tc.IsUpCoverage()
+			if errCover != nil {
+				_, _, createIssueCommentErr := c.CreateIssueComment(hook.Repository.Owner.UserName, hook.Repository.Name, hook.Number, gitea.CreateIssueCommentOption{
+					Body: fmt.Sprintf("**Warning: Test coverage error**\n ```\n%s\n```", errCover.Error()),
+				})
+
+				if createIssueCommentErr != nil {
+					log.Printf("CreateIssueComment: %s", errCover)
+				}
 			}
 
 			return nil
