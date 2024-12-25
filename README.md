@@ -1,4 +1,8 @@
 <div align="center">
+    <a href="README.ru.md">[russian]</a>
+</div>
+
+<div align="center">
 
 # gopher-bot
 
