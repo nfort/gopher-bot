@@ -74,7 +74,7 @@ docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot -v
 Соберите или загрузите бинарник из релиза
 
 ```bash
-CGO_ENABLED=0 GOOS=linux go build -o /gopher-bot cmd/main.go
+CGO_ENABLED=0 GOOS=linux go build -o gopher-bot cmd/main.go
 ```
 
 Добавьте конфиг файл
