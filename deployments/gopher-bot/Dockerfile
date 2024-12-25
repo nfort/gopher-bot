@@ -2,6 +2,8 @@
 
 FROM golang:1.22.7
 
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.56.2
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
