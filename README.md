@@ -2,32 +2,29 @@
 
 # gopher-bot
 
-Бот для проверки Pull Request's в Gitea
+Bot for Pull Request Checks in Gitea
 
 <h4>
-  <a href="#-установка">Установка</a>
+  <a href="#-установка">Install</a>
   ·
-  <a href="#-разработка">Разработка</a>
+  <a href="#-разработка">Development</a>
 </h4>
 
 ![alt text](https://github.com/nfort/gopher-bot/blob/main/screenshot.png?raw=true)
 
 </div>
 
-## ✨ Возможности
+## ✨ Features
 
-- Компиляция кода и проверка на ошибки сборки
-- Запуск линтера
-- Запуск автоматизированных тестов для проверки работоспособности кода
-- Анализ покрытия кода тестами 
-- Может выполнять команды из Makefile (make build, lint, test)
+- Code compilation and build error checking
+- Running a linter
+- Running automated tests to check code functionality
+- Code coverage analysis 
+- Executing commands from Makefile (e.g., make build, lint, test)
 
-## 📦 Установка
+## 📦 Install
 
-Для начала настройте Gitea
-
-Убедитесь что Gitea позволят взаймодействовать с ботом, 
-для этого в конфиге должна быть прописана директива `ALLOWED_HOST_LIST` с хостом, на котором развернут gopher-bot.
+Make sure that Gitea allows interaction with the bot. For this, the `ALLOWED_HOST_LIST` directive must be specified in the configuration with the host where gopher-bot is deployed:
 
 ```bash
 cat << EOF >> /etc/gitea/app.ini
@@ -35,26 +32,26 @@ cat << EOF >> /etc/gitea/app.ini
 ALLOWED_HOST_LIST = *
 EOF
 ```
-1. Для всех репозиторий, где вы хотите использовать gopher-bot, откройте настройки webhook репозитория и создайте новый `Gitea` webhook (Trigger On and Branch filter depend on what you would like to use, of course)
-    * Target URL: URL на котором развернут gopher-bot, вместе `/hook` сегментом (`http://gopher-bot:8080/hook`)
+1. For each repository where you want to use gopher-bot, open the webhook settings and create a new Gitea webhook:
+    * Target URL: The URL where gopher-bot is deployed, with the `/hook` segment (`http://gopher-bot:8080/hook`)
     * HTTP Method: `POST`
     * POST Content Type: `application/json`
-    * Secret: the secret your [config](#config) contains
+    * Secret: the secret your config contains
     * Trigger On: Custom Events...
       * Pull Request Events
         * Pull Request
         * Pull Request Synchronized
     * Branch filter: `*`
     * Active: ✅
-2. Добавить пользователя gopher-bot c токеном c правами на repo
-2. Добавить пользователя gopher-bot в репозиторий
-3. Установите gopher-bot
+2. Add the gopher-bot user with a token and repository rights.
+2. Add the gopher-bot user to the repository
+3. Install gopher-bot
 
-Можно выполнить установка двумя способа: Docker или бинарник
+Installation can be done in two ways: via Docker or using a binary.
 
 ### Docker
 
-На машине выполнить команды, указав gitea_host, token пользователя gopher-bot и secret
+On the machine, execute the commands, specifying gitea_host, the gopher-bot user token, and the secret:
 
 ```bash
 docker volume create gopher-bot_config
@@ -69,15 +66,15 @@ SECRET=[SECRET]'
 docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot -v gopher-bot_var:/var/gopher-bot --name gopher-bot nfort/gopher-bot:1.0.0
 ```
 
-### Бинарник
+### Binary
 
-Соберите или загрузите бинарник из релиза
+Build or download the binary from release page
 
 ```bash
 CGO_ENABLED=0 GOOS=linux go build -o gopher-bot cmd/main.go
 ```
 
-Добавьте конфиг файл
+Add the configuration
 
 ```bash
 cat << EOF >> /etc/gopher-bot/config.ini
@@ -89,14 +86,14 @@ DEBUG_MODE=true
 SECRET=[secret]
 ```
 
-Добавьте бинарник на сервер и запустите.
-Если вы используете golangci-lint или другие инструменты в качестве зависимостей проекта, их также следует установить на сервер.
+Add binary to server and run it.
+If you are using golangci-lint or other tools as project dependencies, it's should also be installed on the server.
 
-## 🚀 Разработка
+## 🚀 Development
 
-После запуска `docker compose up`, нужно остановить.
+After running `docker compose up`, you need to stop the container.
 
-1. Выполнить команду
+1. Execute the command
 
 ```bash
 docker run -it --rm -v gitea_gitea-config:/etc/gitea busybox sh -c 'cat << EOF >> /etc/gitea/app.ini
@@ -105,9 +102,8 @@ ALLOWED_HOST_LIST = *
 EOF'
 ```
 
-2. При настройки Gitea указать `gitea:3000` вместо `localhost:3000` в качестве хоста.
-Добавить пользотеля `gopher-bot`, добавить токен с правами на repo.
-Скопировать токен
+2. When setting up Gitea, specify gitea:3000 instead of localhost:3000 as the host. Add the gopher-bot user and configure its token with repository
+
 
 ```bash
 docker volume create gopher-bot_config
@@ -122,13 +118,13 @@ SECRET=iNeydroTioUC'
 docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot -v gopher-bot_var:/var/gopher-bot --name gopher-bot nfort/gopher-bot:1.0.0
 ```
 
-3. Добавить webhook для репозитория
-4. Указать SECRET
-5. В качестве хоста указать `gopher-bot:8080/hooks`
-6. Дать права на PR, PR Synchronize
-7. Добавить пользователя gopher-bot в репозиторий
+3. Add webhook for repository
+4. Set SECRET
+5. Set URL to `gopher-bot:8080/hooks`
+6. Add rights fro PR, PR Synchronize
+7. Add user gopher-bot to repository 
 
-## Как добавить gopher-bot в systemd
+## How to add gopher-bot to systemd
 
 ```bash
 cat << EOF >> /etc/systemd/system/gopher-bot.service
@@ -150,13 +146,13 @@ WantedBy=multi-user.target
 EOF
 ```
 
-Выполнить перезагрузку systemd 
+Execute reload systemd 
 
 ```bash
 systemctl daemon-reload
 ```
 
-Добавить сервис в systemd
+Add service to systemd
 
 ```bash
 systemctl enable gopher-bot
