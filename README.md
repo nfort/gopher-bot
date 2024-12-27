@@ -20,7 +20,7 @@ Bot for Pull Request Checks in Gitea
 
 ## ✨ Features
 
-- Code compilation and build error checking
+- Code compilation and build error checks
 - Running a linter
 - Running automated tests to check code functionality
 - Code coverage analysis 
@@ -28,7 +28,7 @@ Bot for Pull Request Checks in Gitea
 
 ## 📦 Install
 
-Make sure that Gitea allows interaction with the bot. For this, the `ALLOWED_HOST_LIST` directive must be specified in the configuration with the host where gopher-bot is deployed:
+Make sure that Gitea allows interaction with the bot. For this, the `ALLOWED_HOST_LIST` directive should be specified in the configuration with the host where gopher-bot is deployed:
 
 ```bash
 cat << EOF >> /etc/gitea/app.ini
@@ -37,7 +37,7 @@ ALLOWED_HOST_LIST = *
 EOF
 ```
 1. For each repository where you want to use gopher-bot, open the webhook settings and create a new Gitea webhook:
-    * Target URL: The URL where gopher-bot is deployed, with the `/hook` segment (`http://gopher-bot:8080/hook`)
+    * Target URL: The URL where gopher-bot is deployed with the `/hook` segment (`http://gopher-bot:8080/hook`)
     * HTTP Method: `POST`
     * POST Content Type: `application/json`
     * Secret: the secret your config contains
@@ -48,8 +48,8 @@ EOF
     * Branch filter: `*`
     * Active: ✅
 2. Add the gopher-bot user with a token and repository rights.
-2. Add the gopher-bot user to the repository
-3. Install gopher-bot
+2. Add the gopher-bot user to the repository.
+3. Install gopher-bot.
 
 Installation can be done in two ways: via Docker or using a binary.
 
@@ -72,13 +72,13 @@ docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot -v
 
 ### Binary
 
-Build or download the binary from release page
+Build or download the binary from the release page:
 
 ```bash
 CGO_ENABLED=0 GOOS=linux go build -o gopher-bot cmd/main.go
 ```
 
-Add the configuration
+Add the configuration:
 
 ```bash
 cat << EOF >> /etc/gopher-bot/config.ini
@@ -90,14 +90,14 @@ DEBUG_MODE=true
 SECRET=[secret]
 ```
 
-Add binary to server and run it.
-If you are using golangci-lint or other tools as project dependencies, it's should also be installed on the server.
+Add the binary to the server and run it.
+If your project dependencies include tools like golangci-lint, ensure they are installed on the server.
 
 ## 🚀 Development
 
 After running `docker compose up`, you need to stop the container.
 
-1. Execute the command
+1. Execute the command:
 
 ```bash
 docker run -it --rm -v gitea_gitea-config:/etc/gitea busybox sh -c 'cat << EOF >> /etc/gitea/app.ini
@@ -106,7 +106,7 @@ ALLOWED_HOST_LIST = *
 EOF'
 ```
 
-2. When setting up Gitea, specify gitea:3000 instead of localhost:3000 as the host. Add the gopher-bot user and configure its token with repository
+2. When setting up Gitea, specify gitea:3000 instead of localhost:3000 as the host. Add the gopher-bot user and configure its token for the repository.
 
 
 ```bash
@@ -122,11 +122,11 @@ SECRET=iNeydroTioUC'
 docker run --restart always -p 8080:8080 -v gopher-bot_config:/etc/gopher-bot -v gopher-bot_var:/var/gopher-bot --name gopher-bot nfort/gopher-bot:1.0.0
 ```
 
-3. Add webhook for repository
-4. Set SECRET
-5. Set URL to `gopher-bot:8080/hooks`
-6. Add rights fro PR, PR Synchronize
-7. Add user gopher-bot to repository 
+3. Add the webhook for the repository.
+4. Set SECRET.
+5. Set URL to `gopher-bot:8080/hooks`.
+6. Add rights fro PR, PR Synchronize.
+7. Add the gopher-bot user to the repository.
 
 ## How to add gopher-bot to systemd
 
@@ -150,13 +150,13 @@ WantedBy=multi-user.target
 EOF
 ```
 
-Execute reload systemd 
+Reload systemd:
 
 ```bash
 systemctl daemon-reload
 ```
 
-Add service to systemd
+Add the service to systemd:
 
 ```bash
 systemctl enable gopher-bot
