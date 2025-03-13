@@ -231,19 +231,23 @@ func runCheckPR(hook *models.PRHook) {
 			return nil
 		},
 		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
-			var cmderr error
+			var cmdStdout string
+			var cmdErr error
 
 			command := cmd.NewCommand(workingDir)
 			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
 			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
 				log.Printf("Makefile not found")
-				_, cmderr = command.Run("go", "test", "./...")
+				cmdStdout, cmdErr = command.Run("go", "test", "./...")
 			} else {
-				_, cmderr = command.Run("make", "test")
+				cmdStdout, cmdErr = command.Run("make", "test")
 			}
 
-			if cmderr != nil {
-				return fmt.Errorf("**Test error**\n ```\n%s\n```", cmderr.Error())
+			if cmdErr != nil {
+				if len(cmdStdout) == 0 {
+					return fmt.Errorf("**Test error**\n ```\n%s\n```", cmdErr.Error())
+				}
+				return fmt.Errorf("**Test error**\n ```\n%s\n\n\n\n%s\n```", cmdStdout, cmdErr.Error())
 			}
 
 			return nil
