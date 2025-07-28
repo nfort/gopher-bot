@@ -167,7 +167,6 @@ func runCheckPR(hook *models.PRHook) {
 		finishPr("TempDir", err, hook)
 		return
 	}
-	defer os.RemoveAll(workingDir)
 
 	r, err := git.PlainClone(workingDir, false, &git.CloneOptions{
 		Auth:              config.Config.Token(instance).Git(),
@@ -262,6 +261,7 @@ func runCheckPR(hook *models.PRHook) {
 	}
 
 	go func() {
+		defer os.RemoveAll(workingDir)
 		repo := testcoverage.NewRepo(database)
 		tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
 		errCover := tc.IsUpCoverage(context.Background())
