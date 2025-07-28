@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -35,6 +36,7 @@ type responseMsg struct {
 }
 
 func HandlerWebHook(c *gin.Context) {
+	// Нахуа? Мб удалить
 	if c.Request.Header["X-Gitea-Event"] == nil || len(c.Request.Header["X-Gitea-Event"]) != 1 {
 		log.Println("missing header")
 		c.JSON(http.StatusNotFound, responseMsg{"missing header"})
@@ -190,16 +192,16 @@ func runCheckPR(hook *models.PRHook) {
 	}
 
 	runner := NewRunner(workingDir, r, hook,
-		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+		func(ctx context.Context, workingDir string, r *git.Repository, hook *models.PRHook) error {
 			var cmderr error
 
 			command := cmd.NewCommand(workingDir)
 			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
 			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
 				log.Printf("Makefile not found")
-				_, cmderr = command.Run("go", "build")
+				_, cmderr = command.Run(ctx, "go", "build")
 			} else {
-				_, cmderr = command.Run("make", "build")
+				_, cmderr = command.Run(ctx, "make", "build")
 			}
 
 			if cmderr != nil {
@@ -208,7 +210,7 @@ func runCheckPR(hook *models.PRHook) {
 
 			return nil
 		},
-		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+		func(ctx context.Context, workingDir string, r *git.Repository, hook *models.PRHook) error {
 			var cmdStdout string
 			var cmdErr error
 
@@ -216,9 +218,9 @@ func runCheckPR(hook *models.PRHook) {
 			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
 			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
 				log.Printf("Makefile not found")
-				cmdStdout, cmdErr = command.Run("golangci-lint", "run", "-v")
+				cmdStdout, cmdErr = command.Run(ctx, "golangci-lint", "run", "-v")
 			} else {
-				cmdStdout, cmdErr = command.Run("make", "lint")
+				cmdStdout, cmdErr = command.Run(ctx, "make", "lint")
 			}
 
 			if cmdErr != nil {
@@ -230,7 +232,7 @@ func runCheckPR(hook *models.PRHook) {
 
 			return nil
 		},
-		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
+		func(ctx context.Context, workingDir string, r *git.Repository, hook *models.PRHook) error {
 			var cmdStdout string
 			var cmdErr error
 
@@ -238,9 +240,9 @@ func runCheckPR(hook *models.PRHook) {
 			makefile := filepath.Clean(filepath.Join(workingDir, "Makefile"))
 			if _, err = os.Stat(makefile); errors.Is(err, os.ErrNotExist) {
 				log.Printf("Makefile not found")
-				cmdStdout, cmdErr = command.Run("go", "test", "./...")
+				cmdStdout, cmdErr = command.Run(ctx, "go", "test", "./...")
 			} else {
-				cmdStdout, cmdErr = command.Run("make", "test")
+				cmdStdout, cmdErr = command.Run(ctx, "make", "test")
 			}
 
 			if cmdErr != nil {
@@ -252,28 +254,27 @@ func runCheckPR(hook *models.PRHook) {
 
 			return nil
 		},
-		func(workingDir string, r *git.Repository, hook *models.PRHook) error {
-			repo := testcoverage.NewRepo(database)
-			tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
-			errCover := tc.IsUpCoverage()
-			if errCover != nil {
-				_, _, createIssueCommentErr := c.CreateIssueComment(hook.Repository.Owner.UserName, hook.Repository.Name, hook.Number, gitea.CreateIssueCommentOption{
-					Body: fmt.Sprintf("**Warning: Test coverage error**\n ```\n%s\n```", errCover.Error()),
-				})
-
-				if createIssueCommentErr != nil {
-					log.Printf("CreateIssueComment: %s", errCover)
-				}
-			}
-
-			return nil
-		},
 	)
 
-	err = runner.Run()
+	err = <-runner.Run()
 	if err != nil {
 		log.Printf("Runner.Run: %s", err)
 	}
+
+	go func() {
+		repo := testcoverage.NewRepo(database)
+		tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
+		errCover := tc.IsUpCoverage(context.Background())
+		if errCover != nil {
+			_, _, createIssueCommentErr := c.CreateIssueComment(hook.Repository.Owner.UserName, hook.Repository.Name, hook.Number, gitea.CreateIssueCommentOption{
+				Body: fmt.Sprintf("**Warning: Test coverage error**\n ```\n%s\n```", errCover.Error()),
+			})
+
+			if createIssueCommentErr != nil {
+				log.Printf("CreateIssueComment: %s", errCover)
+			}
+		}
+	}()
 
 	if err != nil {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{

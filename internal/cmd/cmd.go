@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"io"
 	"log"
@@ -17,8 +18,8 @@ func NewCommand(workingDir string) *Command {
 	}
 }
 
-func (c *Command) Run(name string, arg ...string) (string, error) {
-	cmd := exec.Command(name, arg...)
+func (c *Command) Run(ctx context.Context, name string, arg ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, arg...)
 	if c.workingDir != "" {
 		cmd.Dir = c.workingDir
 	}
