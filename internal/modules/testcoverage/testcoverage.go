@@ -1,6 +1,9 @@
 package testcoverage
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type TestCoverage struct {
 	projectName string
@@ -16,23 +19,23 @@ func NewTestCoverage(projectName string, workingDir string, repo *Repo) *TestCov
 	}
 }
 
-func (t *TestCoverage) IsUpCoverage() error {
-	currentHash, err := t.cmd.GetCurrentCommitHash()
+func (t *TestCoverage) IsUpCoverage(ctx context.Context) error {
+	currentHash, err := t.cmd.GetCurrentCommitHash(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = t.getAndPutCoverageProcentToRepo(currentHash)
+	err = t.getAndPutCoverageProcentToRepo(ctx, currentHash)
 	if err != nil {
 		return err
 	}
 
-	previousHash, err := t.cmd.GetPreviousCommitHash()
+	previousHash, err := t.cmd.GetPreviousCommitHash(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = t.getAndPutCoverageProcentToRepo(previousHash)
+	err = t.getAndPutCoverageProcentToRepo(ctx, previousHash)
 	if err != nil {
 		return err
 	}
@@ -54,16 +57,16 @@ func (t *TestCoverage) IsUpCoverage() error {
 	return fmt.Errorf("coverage went down from %f to %f", previousCoverageProcent, currentCoverageProcent)
 }
 
-func (t *TestCoverage) getAndPutCoverageProcentToRepo(hash string) error {
+func (t *TestCoverage) getAndPutCoverageProcentToRepo(ctx context.Context, hash string) error {
 	ok, err := t.repo.HasCoverageProcent(t.projectName, hash)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		if err := t.cmd.CheckoutToCommitByHash(hash); err != nil {
+		if err := t.cmd.CheckoutToCommitByHash(ctx, hash); err != nil {
 			return err
 		}
-		coverageProcent, err := t.cmd.CoverageProcent()
+		coverageProcent, err := t.cmd.CoverageProcent(ctx)
 		if err != nil {
 			return err
 		}

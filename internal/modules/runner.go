@@ -1,14 +1,15 @@
 package modules
 
 import (
-	"log"
+	"context"
+	"sync"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/nfort/gopher-bot/internal/models"
 )
 
 type (
-	Func   func(workingDi string, r *git.Repository, hook *models.PRHook) error
+	Func   func(ctx context.Context, workingDi string, r *git.Repository, hook *models.PRHook) error
 	Runner struct {
 		handlers   []Func
 		repo       *git.Repository
@@ -26,42 +27,29 @@ func NewRunner(workingDir string, repo *git.Repository, hook *models.PRHook, fun
 	}
 }
 
-func (c *Runner) Run() error {
-	var err error
+func (c *Runner) Run() <-chan error {
+	ch := make(chan error)
+	var wg sync.WaitGroup
+
+	baseCtx, baseCtxCancel := context.WithCancel(context.Background())
+
+	wg.Add(len(c.handlers))
 	for _, handler := range c.handlers {
-		err = c.reset()
-		if err != nil {
-			return err
-		}
-		err = handler(c.workingDir, c.repo, c.hook)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *Runner) reset() error {
-	w, err := c.repo.Worktree()
-	if err != nil {
-		log.Printf("Worktree: %s", err)
-		return err
+		go func() {
+			defer wg.Done()
+			err := handler(baseCtx, c.workingDir, c.repo, c.hook)
+			if err != nil {
+				baseCtxCancel()
+				ch <- err
+			}
+		}()
 	}
 
-	ref, err := c.repo.Head()
-	if err != nil {
-		log.Printf("Head: %s", err)
-		return err
-	}
+	go func() {
+		wg.Wait()
+		baseCtxCancel()
+		close(ch)
+	}()
 
-	err = w.Reset(&git.ResetOptions{
-		Commit: ref.Hash(),
-		Mode:   git.HardReset,
-	})
-	if err != nil {
-		log.Printf("Reset: %s", err)
-		return err
-	}
-
-	return nil
+	return ch
 }

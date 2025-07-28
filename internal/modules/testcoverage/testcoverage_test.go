@@ -1,6 +1,7 @@
 package testcoverage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +18,7 @@ func TestIsUpCoverage(t *testing.T) {
 	defer os.RemoveAll(workingDir)
 
 	cmd := cmd.NewCommand(workingDir)
-	_, err := cmd.Run("tar", "-zxf", gitRepoTarGz, "-C", workingDir)
+	_, err := cmd.Run(context.Background(), "tar", "-zxf", gitRepoTarGz, "-C", workingDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,12 +26,12 @@ func TestIsUpCoverage(t *testing.T) {
 	r := NewRepo("sqlite.db")
 
 	tc := NewTestCoverage("go-test", workingDir, r)
-	err = tc.cmd.CheckoutToCommitByHash("681fc9102edd7b37d5775fcc8115d210a1471fd1")
+	err = tc.cmd.CheckoutToCommitByHash(context.Background(), "681fc9102edd7b37d5775fcc8115d210a1471fd1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = tc.IsUpCoverage()
+	err = tc.IsUpCoverage(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestIsUpCoverageFailed(t *testing.T) {
 	defer os.RemoveAll(workingDir)
 
 	cmd := cmd.NewCommand(workingDir)
-	_, err := cmd.Run("tar", "-zxf", gitRepoTarGz, "-C", workingDir)
+	_, err := cmd.Run(context.Background(), "tar", "-zxf", gitRepoTarGz, "-C", workingDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func TestIsUpCoverageFailed(t *testing.T) {
 
 	tc := NewTestCoverage("go-test", workingDir, r)
 
-	err = tc.IsUpCoverage()
+	err = tc.IsUpCoverage(context.Background())
 	if err == nil {
 		t.Fatal(err)
 	}

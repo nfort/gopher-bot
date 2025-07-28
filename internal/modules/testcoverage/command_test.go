@@ -1,6 +1,7 @@
 package testcoverage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,14 +16,14 @@ func TestCoverageProcent(t *testing.T) {
 	defer os.RemoveAll(testRepoFolder)
 
 	cmd := cmd.NewCommand(testRepoFolder)
-	_, err := cmd.Run("tar", "-zxf", repo, "-C", testRepoFolder)
+	_, err := cmd.Run(context.Background(), "tar", "-zxf", repo, "-C", testRepoFolder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	c := NewCommand(testRepoFolder)
 
-	coverage, err := c.CoverageProcent()
+	coverage, err := c.CoverageProcent(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,13 +40,13 @@ func TestRepository(t *testing.T) {
 	defer os.RemoveAll(projectFolder)
 
 	cmd := cmd.NewCommand(projectFolder)
-	_, err := cmd.Run("tar", "-zxf", repo, "-C", projectFolder)
+	_, err := cmd.Run(context.Background(), "tar", "-zxf", repo, "-C", projectFolder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	c := NewCommand(projectFolder)
-	hash, err := c.GetCurrentCommitHash()
+	hash, err := c.GetCurrentCommitHash(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +55,7 @@ func TestRepository(t *testing.T) {
 		t.Fatalf("get invalid hash: %q", hash)
 	}
 
-	hash, err = c.GetPreviousCommitHash()
+	hash, err = c.GetPreviousCommitHash(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,12 +64,12 @@ func TestRepository(t *testing.T) {
 		t.Fatalf("get invalid hash: %q", hash)
 	}
 
-	err = c.CheckoutToCommitByHash(hash)
+	err = c.CheckoutToCommitByHash(context.Background(), hash)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	hash, err = c.GetCurrentCommitHash()
+	hash, err = c.GetCurrentCommitHash(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
