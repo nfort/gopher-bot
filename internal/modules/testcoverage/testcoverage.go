@@ -25,7 +25,7 @@ func (t *TestCoverage) IsUpCoverage(ctx context.Context) error {
 		return err
 	}
 
-	err = t.getAndPutCoverageProcentToRepo(ctx, currentHash)
+	err = t.getAndPutCoveragePercentToRepo(ctx, currentHash)
 	if err != nil {
 		return err
 	}
@@ -35,30 +35,30 @@ func (t *TestCoverage) IsUpCoverage(ctx context.Context) error {
 		return err
 	}
 
-	err = t.getAndPutCoverageProcentToRepo(ctx, previousHash)
+	err = t.getAndPutCoveragePercentToRepo(ctx, previousHash)
 	if err != nil {
 		return err
 	}
 
-	currentCoverageProcent, err := t.repo.GetCoverageProcent(t.projectName, currentHash)
+	currentCoveragePercent, err := t.repo.GetCoveragePercent(t.projectName, currentHash)
 	if err != nil {
 		return err
 	}
 
-	previousCoverageProcent, err := t.repo.GetCoverageProcent(t.projectName, previousHash)
+	previousCoveragePercent, err := t.repo.GetCoveragePercent(t.projectName, previousHash)
 	if err != nil {
 		return err
 	}
 
-	if currentCoverageProcent >= previousCoverageProcent {
+	if currentCoveragePercent >= previousCoveragePercent {
 		return nil
 	}
 
-	return fmt.Errorf("coverage went down from %f to %f", previousCoverageProcent, currentCoverageProcent)
+	return fmt.Errorf("coverage went down from %f to %f", previousCoveragePercent, currentCoveragePercent)
 }
 
-func (t *TestCoverage) getAndPutCoverageProcentToRepo(ctx context.Context, hash string) error {
-	ok, err := t.repo.HasCoverageProcent(t.projectName, hash)
+func (t *TestCoverage) getAndPutCoveragePercentToRepo(ctx context.Context, hash string) error {
+	ok, err := t.repo.HasCoveragePercent(t.projectName, hash)
 	if err != nil {
 		return err
 	}
@@ -66,11 +66,11 @@ func (t *TestCoverage) getAndPutCoverageProcentToRepo(ctx context.Context, hash 
 		if err := t.cmd.CheckoutToCommitByHash(ctx, hash); err != nil {
 			return err
 		}
-		coverageProcent, err := t.cmd.CoverageProcent(ctx)
+		coveragePercent, err := t.cmd.CoveragePercent(ctx)
 		if err != nil {
 			return err
 		}
-		err = t.repo.AddCoverageProcent(t.projectName, hash, coverageProcent)
+		err = t.repo.AddCoveragePercent(t.projectName, hash, coveragePercent)
 		if err != nil {
 			return err
 		}

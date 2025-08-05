@@ -5,11 +5,11 @@ import (
 	"testing"
 )
 
-func TestHasCoverageProcent(t *testing.T) {
+func TestHasCoveragePercent(t *testing.T) {
 	dsnURI := "test.db"
 	defer os.RemoveAll(dsnURI)
 	repo := NewRepo(dsnURI)
-	has, err := repo.HasCoverageProcent("hello", "asfafa")
+	has, err := repo.HasCoveragePercent("hello", "asfafa")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,21 +18,21 @@ func TestHasCoverageProcent(t *testing.T) {
 	}
 }
 
-func TestAddCoverageProcent(t *testing.T) {
+func TestAddCoveragePercent(t *testing.T) {
 	dsnURI := "test.db"
 	defer os.RemoveAll(dsnURI)
 	repo := NewRepo(dsnURI)
-	err := repo.AddCoverageProcent("hello", "asfafa", 33.3)
+	err := repo.AddCoveragePercent("hello", "asfafa", 33.3)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	coverageProcent, err := repo.GetCoverageProcent("hello", "asfafa")
+	coveragePercent, err := repo.GetCoveragePercent("hello", "asfafa")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if coverageProcent != 33.3 {
+	if coveragePercent != 33.3 {
 		t.Fatal("invalid coverage")
 	}
 }

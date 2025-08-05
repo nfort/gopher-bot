@@ -22,7 +22,7 @@ func NewCommand(workingDir string) *Command {
 	}
 }
 
-func (c *Command) CoverageProcent(ctx context.Context) (float64, error) {
+func (c *Command) CoveragePercent(ctx context.Context) (float64, error) {
 	_, err := c.cmd.Run(ctx, "go", "test", "-coverprofile=coverage.out", "./...")
 	if err != nil {
 		return 0.0, err
