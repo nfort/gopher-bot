@@ -260,21 +260,23 @@ func runCheckPR(hook *models.PRHook) {
 		log.Printf("Runner.Run: %s", err)
 	}
 
-	go func() {
-		defer os.RemoveAll(workingDir)
-		repo := testcoverage.NewRepo(database)
-		tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
-		errCover := tc.IsUpCoverage(context.Background())
-		if errCover != nil {
-			_, _, createIssueCommentErr := c.CreateIssueComment(hook.Repository.Owner.UserName, hook.Repository.Name, hook.Number, gitea.CreateIssueCommentOption{
-				Body: fmt.Sprintf("**Warning: Test coverage error**\n ```\n%s\n```", errCover.Error()),
-			})
+	if err == nil {
+		go func() {
+			defer os.RemoveAll(workingDir)
+			repo := testcoverage.NewRepo(database)
+			tc := testcoverage.NewTestCoverage(hook.Repository.Name, workingDir, repo)
+			errCover := tc.IsUpCoverage(context.Background())
+			if errCover != nil {
+				_, _, createIssueCommentErr := c.CreateIssueComment(hook.Repository.Owner.UserName, hook.Repository.Name, hook.Number, gitea.CreateIssueCommentOption{
+					Body: fmt.Sprintf("**Warning: Test coverage error**\n ```\n%s\n```", errCover.Error()),
+				})
 
-			if createIssueCommentErr != nil {
-				log.Printf("CreateIssueComment: %s", errCover)
+				if createIssueCommentErr != nil {
+					log.Printf("CreateIssueComment: %s", errCover)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	if err != nil {
 		_, _, err = c.CreatePullReview(hook.PullRequest.Base.Repo.Owner.UserName, hook.PullRequest.Base.Repo.Name, hook.Number, gitea.CreatePullReviewOptions{
