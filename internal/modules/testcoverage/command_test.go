@@ -9,7 +9,7 @@ import (
 	"github.com/nfort/gopher-bot/internal/cmd"
 )
 
-func TestCoverageProcent(t *testing.T) {
+func TestCoveragePercent(t *testing.T) {
 	repo, _ := filepath.Abs("git-repo.tar.gz")
 	testRepoFolder, _ := os.MkdirTemp("", "gopher-bot-test-repo-*")
 
@@ -23,7 +23,7 @@ func TestCoverageProcent(t *testing.T) {
 
 	c := NewCommand(testRepoFolder)
 
-	coverage, err := c.CoverageProcent(context.Background())
+	coverage, err := c.CoveragePercent(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

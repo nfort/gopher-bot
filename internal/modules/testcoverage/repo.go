@@ -13,7 +13,7 @@ type Coverage struct {
 	ID      int64 `xorm:"pk autoincr"`
 	Project string
 	Hash    string
-	Procent float64
+	Percent float64
 }
 
 type Repo struct {
@@ -37,7 +37,7 @@ func NewRepo(dsnURI string) *Repo {
 	}
 }
 
-func (r *Repo) GetCoverageProcent(projectName string, hash string) (float64, error) {
+func (r *Repo) GetCoveragePercent(projectName string, hash string) (float64, error) {
 	var coverage Coverage
 	has, err := r.engine.Where("project = ? AND hash = ?", projectName, hash).Get(&coverage)
 	if err != nil {
@@ -46,10 +46,10 @@ func (r *Repo) GetCoverageProcent(projectName string, hash string) (float64, err
 	if !has {
 		return 0.0, nil
 	}
-	return coverage.Procent, nil
+	return coverage.Percent, nil
 }
 
-func (r *Repo) HasCoverageProcent(projectName string, hash string) (bool, error) {
+func (r *Repo) HasCoveragePercent(projectName string, hash string) (bool, error) {
 	var coverage Coverage
 	has, err := r.engine.Where("project = ? AND hash = ?", projectName, hash).Get(&coverage)
 	if err != nil {
@@ -58,11 +58,11 @@ func (r *Repo) HasCoverageProcent(projectName string, hash string) (bool, error)
 	return has, nil
 }
 
-func (r *Repo) AddCoverageProcent(projectName string, hash string, procent float64) error {
+func (r *Repo) AddCoveragePercent(projectName string, hash string, procent float64) error {
 	_, err := r.engine.Table("coverage").Insert(&Coverage{
 		Project: projectName,
 		Hash:    hash,
-		Procent: procent,
+		Percent: procent,
 	})
 	return err
 }
